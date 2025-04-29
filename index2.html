@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>توليد شهادات PDF</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- تهيئة الموقع للجهاز المحمول -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@0.0.4/dist/fontkit.umd.min.js"></script>
+<style>
+body {
+    font-family: 'MTCORSVA', sans-serif;
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    text-align: center;
+    padding: 100px 20px;
+    margin: 0;
+    overflow-x: hidden;
+    min-height: 200vh; /* خلي الصفحة طويلة عشان السكرول يظهر */
+    position: relative;
+}
+
+/* الفورم */
+.container {
+    background: #003366;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2; /* فوق الصور */
+}
+
+/* الصور اللي بتلف */
+.orbit-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1; /* تحت الفورم */
+}
+
+.orbit-image {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    transform-origin: center;
+    animation: orbit 15s linear infinite;
+}
+
+.orbit-image:nth-child(2) {
+    animation-delay: 5s;
+}
+.orbit-image:nth-child(3) {
+    animation-delay: 10s;
+}
+
+@keyframes orbit {
+    0% {
+        transform: translate(50vw, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(100vw, 50vh) rotate(90deg);
+    }
+    50% {
+        transform: translate(50vw, 100vh) rotate(180deg);
+    }
+    75% {
+        transform: translate(0, 50vh) rotate(270deg);
+    }
+    100% {
+        transform: translate(50vw, 0) rotate(360deg);
+    }
+}
+
+/* باقي استايل الفورم */
+h1 {
+    color: #fff;
+}
+label {
+    color: #ffcc33;
+}
+textarea, input, button {
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+}
+textarea {
+    min-height: 100px;
+}
+button {
+    background: #27ae60;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.3s;
+}
+button:hover {
+    background: #2ecc71;
+    transform: scale(1.05);
+}
+#progressBar {
+    width: 0;
+    height: 10px;
+    background: #3498db;
+    margin-top: 20px;
+    border-radius: 5px;
+}
+#loadingText {
+    display: none;
+    color: #fff;
+    margin-top: 10px;
+}
+
+/* تخصيص العرض على الشاشات الصغيرة */
+@media only screen and (max-width: 768px) {
+    body {
+        padding: 50px 10px;
+    }
+    .container {
+        padding: 20px;
+        width: 90%;
+        max-width: 100%;
+    }
+    .orbit-container {
+        width: 100%;
+        height: 100%;
+    }
+    .orbit-image {
+        width: 50px;
+        height: 50px;
+    }
+    h1 {
+        font-size: 24px;
+    }
+    label, textarea, input, button {
+        font-size: 14px;
+    }
+    #progressBar {
+        height: 5px;
+    }
+}
+</style>
+</head>
+<b><a href="index.html" button class="btn">الرئيسية </button></a></b>
+
+<body>
+
+<!-- الصور اللي بتلف -->
+<div class="orbit-container">
+    <img src="C:/Users/Dr mossad salah/Desktop/موقع ادخال اسماء الي قالب/image/pic2.png" class="orbit-image" alt="pic2">
+    <img src="C:/Users/Dr mossad salah/Desktop/موقع ادخال اسماء الي قالب/image/pic3.png" class="orbit-image" alt="pic3">
+    <img src="C:/Users/Dr mossad salah/Desktop/موقع ادخال اسماء الي قالب/image/pic4.png" class="orbit-image" alt="pic4">
+</div>
+
+<!-- الفورم -->
+<div class="container">
+    <img src="C:/Users/Dr mossad salah/Desktop/موقع ادخال اسماء الي قالب/image/pic1.jpg" class="logo" width="150" alt="logo">
+    <h1>توليد شهادات PDF</h1>
+
+    <label>أدخل الأسماء:</label>
+    <textarea id="studentNamesInput" placeholder="مثال: محمد علي\nسارة حسين"></textarea>
+
+    <label>ارفع قالب PDF:</label>
+    <input type="file" id="fileInput" accept="application/pdf">
+
+    <label>ارفع خط (اختياري):</label>
+    <input type="file" id="fontInput" accept=".ttf">
+
+    <button onclick="generatePDF()">توليد الشهادات</button>
+
+    <div id="progressBar"></div>
+    <div id="loadingText">جاري التحميل...</div>
+</div>
+
+<script>
+async function generatePDF() {
+    const namesText = document.getElementById('studentNamesInput').value.trim();
+    const namesArray = namesText.split("\n").filter(name => name.trim() !== "");
+
+    const fileInput = document.getElementById('fileInput');
+    const fontInput = document.getElementById('fontInput');
+
+    if (!fileInput.files.length) {
+        alert("رجاءً اختر قالب PDF.");
+        return;
+    }
+
+    const templateBytes = await fileInput.files[0].arrayBuffer();
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const fontkit = window.fontkit;
+    PDFLib.PDFDocument.prototype.registerFontkit(fontkit);
+
+    let customFont;
+    if (fontInput.files.length) {
+        const fontBytes = await fontInput.files[0].arrayBuffer();
+        customFont = await pdfDoc.embedFont(fontBytes);
+    } else {
+        customFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    }
+
+    const progressBar = document.getElementById("progressBar");
+    const loadingText = document.getElementById("loadingText");
+    progressBar.style.width = "0%";
+    loadingText.style.display = "block";
+
+    for (let i = 0; i < namesArray.length; i++) {
+        const name = namesArray[i];
+        const tempPdf = await PDFLib.PDFDocument.load(templateBytes);
+        const [tempPage] = await pdfDoc.copyPages(tempPdf, [0]);
+        pdfDoc.addPage(tempPage);
+
+        const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+
+        const { width, height } = page.getSize();
+        const fontSize = 40;
+        const textWidth = customFont.widthOfTextAtSize(name, fontSize);
+
+        // تحديد الموقع
+        const x = (width - textWidth) / 2;  // في المنتصف أفقيًا
+        const y = height - 240;  // 50 لتحديد المسافة من أعلى الصفحة
+
+        page.drawText(name, {
+            x: x,
+            y: y,
+            size: fontSize,
+            font: customFont,
+            color: PDFLib.rgb(0, 0, 0),
+        });
+
+        progressBar.style.width = `${((i + 1) / namesArray.length) * 100}%`;
+    }
+
+    const mergedPdfBytes = await pdfDoc.save();
+    const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "all_certificates.pdf";
+    link.click();
+
+    const audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
+    audio.play();
+
+    progressBar.style.width = "100%";
+    loadingText.style.display = "none";
+}
+</script>
+
+</body>
+</html>
